@@ -22,6 +22,7 @@ class Go2LaunchConfig:
         self.map_name = os.getenv('MAP_NAME', '3d_map')
         self.save_map = os.getenv('MAP_SAVE', 'true')
         self.conn_type = os.getenv('CONN_TYPE', 'webrtc')
+        self.map_file = os.getenv('MAP_FILE', '')
         
         # Derived configurations
         self.conn_mode = self._determine_connection_mode()
@@ -82,6 +83,8 @@ class Go2NodeFactory:
             DeclareLaunchArgument('rviz2', default_value='true', description='Launch RViz2'),
             DeclareLaunchArgument('nav2', default_value='true', description='Launch Nav2'),
             DeclareLaunchArgument('slam', default_value='true', description='Launch SLAM'),
+            DeclareLaunchArgument('localization', default_value='false', description='Launch AMCL for localization (use with saved map)'),
+            DeclareLaunchArgument('map', default_value=self.config.map_file, description='Full path to map yaml file for localization'),
             DeclareLaunchArgument('foxglove', default_value='true', description='Launch Foxglove Bridge'),
             DeclareLaunchArgument('joystick', default_value='true', description='Launch joystick'),
             DeclareLaunchArgument('teleop', default_value='true', description='Launch teleoperation'),
@@ -149,12 +152,20 @@ class Go2NodeFactory:
                 executable='pointcloud_to_laserscan_node',
                 name=f'{namespace}_pointcloud_to_laserscan',
                 remappings=[
-                    ('cloud_in', f'{namespace}/point_cloud2'),
+                    ('cloud_in', f'{namespace}/pointcloud/filtered'),
                     ('scan', f'{namespace}/scan'),
                 ],
                 parameters=[{
                     'target_frame': f'{namespace}/base_link',
-                    'max_height': 0.1
+                    'max_height': 2.0,
+                    'min_height': -0.2,
+                    'angle_min': -3.14159,
+                    'angle_max': 3.14159,
+                    'angle_increment': 0.00872665,  # 0.5 degrees
+                    'scan_time': 0.1,
+                    'range_min': 0.1,
+                    'range_max': 20.0,
+                    'use_inf': True,
                 }],
                 output='screen',
             )
@@ -165,12 +176,20 @@ class Go2NodeFactory:
                 executable='pointcloud_to_laserscan_node',
                 name='go2_pointcloud_to_laserscan',
                 remappings=[
-                    ('cloud_in', 'point_cloud2'),
-                    ('scan', 'scan'),
+                    ('cloud_in', '/pointcloud/filtered'),
+                    ('scan', '/scan'),
                 ],
                 parameters=[{
                     'target_frame': 'base_link',
-                    'max_height': 0.5
+                    'max_height': 2.0,
+                    'min_height': -0.2,
+                    'angle_min': -3.14159,
+                    'angle_max': 3.14159,
+                    'angle_increment': 0.00872665,  # 0.5 degrees
+                    'scan_time': 0.1,
+                    'range_min': 0.1,
+                    'range_max': 20.0,
+                    'use_inf': True,
                 }],
                 output='screen',
             )
@@ -195,6 +214,9 @@ class Go2NodeFactory:
                 package='lidar_processor_cpp',
                 executable='lidar_to_pointcloud_node',
                 name='lidar_to_pointcloud',
+                remappings=[
+                    ('robot0/point_cloud2', 'point_cloud2'),  # Remap for single robot mode
+                ] if self.config.conn_mode == 'single' else [],
                 parameters=[{
                     'robot_ip_lst': self.config.robot_ip_list,
                     'map_name': self.config.map_name,
@@ -211,8 +233,8 @@ class Go2NodeFactory:
                     'min_range': 0.1,
                     'height_filter_min': -2.0,
                     'height_filter_max': 3.0,
-                    'downsample_rate': 5,
-                    'publish_rate': 10.0
+                    'downsample_rate': 1,
+                    'publish_rate': 20.0
                 }],
             ),
             # TTS Node (new separate package)
@@ -286,8 +308,10 @@ class Go2NodeFactory:
     def create_include_launches(self) -> List[IncludeLaunchDescription]:
         """Create included launch descriptions"""
         use_sim_time = LaunchConfiguration('use_sim_time', default='false')
+        map_file = LaunchConfiguration('map')
         with_foxglove = LaunchConfiguration('foxglove', default='true')
         with_slam = LaunchConfiguration('slam', default='true')
+        with_localization = LaunchConfiguration('localization', default='false')
         with_nav2 = LaunchConfiguration('nav2', default='true')
         
         foxglove_launch = os.path.join(
@@ -301,7 +325,7 @@ class Go2NodeFactory:
                 FrontendLaunchDescriptionSource(foxglove_launch),
                 condition=IfCondition(with_foxglove),
             ),
-            # SLAM Toolbox
+            # SLAM Toolbox (for mapping - mutually exclusive with AMCL)
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([
                     os.path.join(get_package_share_directory('slam_toolbox'),
@@ -310,6 +334,19 @@ class Go2NodeFactory:
                 condition=IfCondition(with_slam),
                 launch_arguments={
                     'slam_params_file': self.config.config_paths['slam'],
+                    'use_sim_time': use_sim_time,
+                }.items(),
+            ),
+            # AMCL (for localization with saved map - mutually exclusive with SLAM)
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    os.path.join(get_package_share_directory('nav2_bringup'),
+                                'launch', 'localization_launch.py')
+                ]),
+                condition=IfCondition(with_localization),
+                launch_arguments={
+                    'map': map_file,
+                    'params_file': self.config.config_paths['nav2'],
                     'use_sim_time': use_sim_time,
                 }.items(),
             ),
