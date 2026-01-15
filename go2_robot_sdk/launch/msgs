@@ -1,0 +1,41 @@
+You know what ?
+Let's stick to a 2D system, but still have a live (not static) 3D point cloud to display. This way, slam + nav2 use the 2d env, while I'd be able to work on climbing with 3d later.. it's situational either way, it doesn't need to remember where every stair is in the other corner of the map.
+
+I'm having difficulties visualizing the structure.. there's three point clouds presented ? Let's forget the RPi for a second and focus on optimizing this at least for my computer.
+
+Oh yeah, here's the pointcloud_aggregator_node file. Let's take a look.
+
+Weird that it didn't have an effect when I commented out the node before..
+But alright, we'll patch this now and disable it lather if we don't need it.
+If I understand, these are not even implemented yet:
+'Node(
+                package='lidar_processor_cpp',
+                executable='pointcloud_aggregator_node',
+                name='pointcloud_aggregator',
+                parameters=[{
+                    'max_range': 10.0,
+                    'min_range': 0.1,
+                    'height_filter_min': -1.0,
+                    'height_filter_max': 1.0,
+                    'downsample_rate': 10,
+                    'publish_rate': 5.0
+                }],' ?
+From:
+'void LidarToPointCloudNode::declareParameters()
+{
+  this->declare_parameter("robot_ip_lst", std::vector<std::string>{});
+  this->declare_parameter("map_name", "3d_map");
+  this->declare_parameter("map_save", "true");
+  this->declare_parameter("save_interval", 10.0);
+  this->declare_parameter("max_points", 1000000);
+  this->declare_parameter("voxel_size", 0.01);
+}'.
+
+Thanks, let's continue with this setup. Here's the lidar_to_pointcloud_node by the way.
+
+''lidar_downsample': 2' has no effect.
+As for ''lidar_downsample': 2,', there is already ''downsample_rate': 10,'.
+But about this 'Use Raw LiDAR for SLAM' I actually want to talk a bit about that.
+The slam toolbox is 2d only if I understand, but at some point I'll want to use the 3d lidar to climb steps.. still in the fog about that.
+
+One thing, commenting out the 'pointcloud_aggregator_node' and or the 'lidar_to_pointcloud_node, would it actually stop the nodes when the program runs ? Launching whiteout them, the latency is still there, the topics don't apear, but they weren't displayable ever. Plus, the '/point_cloud2' already seems agregated ? It builds a 3d map, not just showing the 'live' data..

@@ -54,7 +54,7 @@ class Go2NodeFactory:
         """Create all launch arguments"""
         return [
             DeclareLaunchArgument('rviz2', default_value='true', description='Launch RViz2'),
-            DeclareLaunchArgument('nav2', default_value='true', description='Launch Nav2'),
+            DeclareLaunchArgument('nav2', default_value='false', description='Launch Nav2'),
             DeclareLaunchArgument('slam', default_value='true', description='Launch SLAM'),
             DeclareLaunchArgument('teleop', default_value='true', description='Launch teleoperation'),
         ]
@@ -93,7 +93,8 @@ class Go2NodeFactory:
                     'token': self.config.robot_token,
                     'conn_type': self.config.conn_type,
                     'enable_video': False,
-                    'decode_lidar': True,
+                    'decode_lidar': False,
+                    'publish_raw_voxel': True,
                 }],
             ),
             #LiDAR processing node (C++ implementation)

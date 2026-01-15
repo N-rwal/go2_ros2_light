@@ -157,6 +157,7 @@ class LidarDecoder:
 
     def decode(self, compressed_data, data):
         """Original decode method that actually works with the WASM module"""
+
         self.add_value_arr(self.input, compressed_data)
 
         some_v = math.floor(data["origin"][2] / data["resolution"])
@@ -240,7 +241,7 @@ def decode_lidar_data(
     # Convert to expected format
     positions = result["positions"]
     uvs = result["uvs"]
-    
+
     return update_meshes_for_cloud2(
         positions, uvs, resolution, origin, intensity_threshold
-    ) 
+    )
