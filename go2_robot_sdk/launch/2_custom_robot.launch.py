@@ -53,7 +53,7 @@ class Go2NodeFactory:
     def create_launch_arguments(self) -> List[DeclareLaunchArgument]:
         """Create all launch arguments"""
         return [
-            DeclareLaunchArgument('rviz2', default_value='true', description='Launch RViz2'),
+            DeclareLaunchArgument('rviz2', default_value='false', description='Launch RViz2'),
             DeclareLaunchArgument('nav2', default_value='true', description='Launch Nav2'),
             DeclareLaunchArgument('slam', default_value='true', description='Launch SLAM'),
             DeclareLaunchArgument('teleop', default_value='true', description='Launch teleoperation'),
