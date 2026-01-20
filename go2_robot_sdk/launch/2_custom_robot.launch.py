@@ -93,7 +93,7 @@ class Go2NodeFactory:
                     'token': self.config.robot_token,
                     'conn_type': self.config.conn_type,
                     'enable_video': False,
-                    'decode_lidar': False,
+                    'decode_lidar': True,
                 }],
             ),
             #LiDAR processing node (C++ implementation)
@@ -218,3 +218,4 @@ def generate_launch_description():
     )
     
     return LaunchDescription(launch_entities)
+
