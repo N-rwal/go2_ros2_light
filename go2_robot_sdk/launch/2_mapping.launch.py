@@ -13,36 +13,40 @@ from launch.conditions import IfCondition
 
 def generate_launch_description():
     """Generate minimal launch description for Go2 mapping with external LiDAR"""
-    
+
     # Environment variables
     robot_ip = os.getenv('ROBOT_IP', '192.168.123.161')
     robot_token = os.getenv('ROBOT_TOKEN', '')
     conn_type = os.getenv('CONN_TYPE', 'webrtc')
-    
+
     # Package paths
     package_dir = get_package_share_directory('go2_robot_sdk')
-    
+    sllidar_package_dir = get_package_share_directory('sllidar_ros2')
+
     # Essential config files
     config_paths = {
         'slam': os.path.join(package_dir, 'config', 'mapper_params_online_async.yaml'),
         'twist_mux': os.path.join(package_dir, 'config', 'twist_mux.yaml'),
+        'sllidar_launch': os.path.join(sllidar_package_dir, 'launch', 'sllidar_s3_launch.py'),
     }
-    
+
+    print("/////////////--------------------------------------------TEST--------------------------/////////////////////")
     print(f"🗺️  Minimal Mapping Configuration:")
     print(f"   Robot IP: {robot_ip}")
     print(f"   Connection: {conn_type}")
-    
+    print(f"   Using SLLIDAR S3 for 2D scanning")
+
     # Launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     with_slam = LaunchConfiguration('slam', default='true')
-    
+
     launch_args = [
-        DeclareLaunchArgument('slam', default_value='true', 
+        DeclareLaunchArgument('slam', default_value='true',
                             description='Launch SLAM Toolbox'),
         DeclareLaunchArgument('use_sim_time', default_value='false',
                             description='Use simulation time'),
     ]
-    
+
     # CORE NODES - Only essential components
     core_nodes = [
         # Main robot driver (MINIMAL configuration)
@@ -59,7 +63,7 @@ def generate_launch_description():
                 'decode_lidar': False,  # Disable internal LiDAR processing
             }],
         ),
-        
+
         # Teleop capability (twist mux only)
         Node(
             package='twist_mux',
@@ -70,26 +74,38 @@ def generate_launch_description():
                 config_paths['twist_mux']
             ],
         ),
-    ]
-    
-    # SLAM TOOLBOX - For map creation (expects /scan topic)
-    include_launches = [
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                os.path.join(get_package_share_directory('slam_toolbox'),
-                            'launch', 'online_async_launch.py')
-            ]),
-            condition=IfCondition(with_slam),
-            launch_arguments={
-                'slam_params_file': config_paths['slam'],
-                'use_sim_time': use_sim_time,
-            }.items(),
+
+        # Static transform from base_link to laser (for SLLIDAR)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_transform_publisher',
+            arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'laser'],
         ),
     ]
-    
-    # Combine all components
+
+    # SLLIDAR launch - Match old structure EXACTLY
+    lidar_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([config_paths['sllidar_launch']]),
+        # NO condition - matches old working code
+    )
+
+    # SLAM Toolbox - For map creation (expects /scan topic from SLLIDAR)
+    slam_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            os.path.join(get_package_share_directory('slam_toolbox'),
+                        'launch', 'online_async_launch.py')
+        ]),
+        condition=IfCondition(with_slam),
+        launch_arguments={
+            'slam_params_file': config_paths['slam'],
+            'use_sim_time': use_sim_time,
+        }.items(),
+    )
+
+    # Combine all components - Match old structure
     return LaunchDescription(
         launch_args +
         core_nodes +
-        include_launches
+        [slam_launch]  # Combine them in a list
     )
