@@ -75,7 +75,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='base_to_laser_tf',
-            arguments=['0', '0', '0.2', '0', '0', '0', 'base_link', 'laser'],
+            arguments=['0.2', '0', '0.1', '0', '0', '0', 'base_link', 'laser'],
         ),
         
         # Initial map to odom transform (AMCL will update this)
@@ -110,7 +110,7 @@ def generate_launch_description():
     
     # Initial pose publisher (delayed to ensure AMCL is ready)
     initial_pose_timer = TimerAction(
-        period=15.0,  # Increased to 15s to ensure Nav2 is fully initialized
+        period=15.0,
         actions=[
             Node(
                 package='go2_robot_sdk',
