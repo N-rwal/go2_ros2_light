@@ -39,6 +39,8 @@ setup(
         'console_scripts': [
             'go2_driver_node = go2_robot_sdk.main:main',
             'initial_pose_pub = go2_robot_sdk.initial_pose_pub:main',
+            'sequential_nav_test = go2_robot_sdk.sequential_nav_test:main',
+            'nav_controller = go2_robot_sdk.nav_controller:main',
         ],
     },
 )

@@ -11,8 +11,8 @@ class InitialPosePublisher(Node):
     def publish_pose(self):
         msg = PoseWithCovarianceStamped()
         msg.header.frame_id = 'map'
-        msg.pose.pose.position.x = 1.0
-        msg.pose.pose.position.y = 2.0
+        msg.pose.pose.position.x = -1.0
+        msg.pose.pose.position.y = 0.0
         msg.pose.pose.orientation.z = 0.0
         msg.pose.pose.orientation.w = 1.0
         msg.pose.covariance = [0.0] * 36

@@ -36,10 +36,8 @@ def generate_launch_description():
     launch_args = [
         DeclareLaunchArgument('nav2', default_value='true', description='Launch Nav2'),
         DeclareLaunchArgument('use_sim_time', default_value='false', description='Use simulation time'),
-        DeclareLaunchArgument('map', default_value=config_paths['default_map_yaml'], 
-                            description='Full path to map yaml file'),
-        DeclareLaunchArgument('params_file', default_value=config_paths['nav2_params'],
-                            description='Full path to Nav2 parameters file'),
+        DeclareLaunchArgument('map', default_value=config_paths['default_map_yaml'], description='Full path to map yaml file'),
+        DeclareLaunchArgument('params_file', default_value=config_paths['nav2_params'], description='Full path to Nav2 parameters file'),
     ]
     
     # CORE NODES
@@ -59,7 +57,7 @@ def generate_launch_description():
             }],
         ),
         
-        # Teleop capability (twist mux only)
+        # Teleop capability
         Node(
             package='twist_mux',
             executable='twist_mux',
@@ -70,7 +68,7 @@ def generate_launch_description():
             ],
         ),
         
-        # TF from base_link to laser (adjust height 0.2m as needed)
+        # TF from base_link to laser
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -78,7 +76,7 @@ def generate_launch_description():
             arguments=['0.2', '0', '0.1', '0', '0', '0', 'base_link', 'laser'],
         ),
         
-        # Initial map to odom transform (AMCL will update this)
+        # Initial map to odom transform
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -87,7 +85,7 @@ def generate_launch_description():
         ),
     ]
     
-    # SLLIDAR launch (with 10-second delay - good for hardware initialization)
+    # SLLIDAR launch
     lidar_launch = TimerAction(
         period=10.0,
         actions=[
@@ -97,7 +95,7 @@ def generate_launch_description():
         ]
     )
     
-    # CUSTOM NAVIGATION LAUNCH (combines localization + navigation)
+    # CUSTOM NAVIGATION LAUNCH
     nav_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([config_paths['custom_nav_launch']]),
         condition=IfCondition(with_nav2),
@@ -108,7 +106,14 @@ def generate_launch_description():
         }.items()
     )
     
-    # Initial pose publisher (delayed to ensure AMCL is ready)
+    controller_node = Node(
+        package='go2_robot_sdk',
+        executable='nav_controller',
+        name='nav_controller',
+        output='screen'
+    )
+
+    #Initial pose publisher
     initial_pose_timer = TimerAction(
         period=15.0,
         actions=[
@@ -125,5 +130,5 @@ def generate_launch_description():
     return LaunchDescription(
         launch_args +
         core_nodes +
-        [lidar_launch, nav_launch, initial_pose_timer]
+        [lidar_launch, nav_launch, initial_pose_timer, controller_node]
     )
