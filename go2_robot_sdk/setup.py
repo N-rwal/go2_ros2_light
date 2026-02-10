@@ -25,6 +25,7 @@ setup(
         (os.path.join('share', package_name, 'calibration'), glob(os.path.join('calibration', '*'))),
         (os.path.join('share', package_name, 'external_lib'), ['external_lib/libvoxel.wasm']),
         (os.path.join('share', package_name, 'external_lib/aioice'), glob(os.path.join('external_lib/aioice/src/aioice', '*'))),
+        (os.path.join('share', package_name, 'map'), glob(os.path.join('map', '*'))),
 
 
     ],
@@ -37,6 +38,7 @@ setup(
     entry_points={
         'console_scripts': [
             'go2_driver_node = go2_robot_sdk.main:main',
+            'initial_pose_pub = go2_robot_sdk.initial_pose_pub:main',
         ],
     },
 )
